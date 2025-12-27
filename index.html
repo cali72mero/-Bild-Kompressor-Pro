@@ -1,0 +1,2298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ Bild Kompressor Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #16213e 100%);
+            padding: 24px;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            color: #e0e0e0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .header h1 {
+            font-size: 42px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 16px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            padding: 24px;
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(102, 126, 234, 0.5);
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(102, 126, 234, 0.05);
+            margin-bottom: 16px;
+        }
+
+        .dropzone:hover, .dropzone.dragover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.15);
+        }
+
+        .dropzone-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .dropzone p {
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+
+        .dropzone small {
+            color: #666;
+            font-size: 13px;
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #22c55e, #10b981);
+        }
+
+        .btn-magic {
+            background: linear-gradient(135deg, #f59e0b, #ef4444, #ec4899);
+            animation: shimmer 2s infinite;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #06b6d4, #0891b2);
+        }
+
+        @keyframes shimmer {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .btn-large {
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .btn:disabled {
+            background: rgba(255,255,255,0.1);
+            color: #666;
+            cursor: not-allowed;
+            animation: none;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .btn-clear {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: #f87171;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .btn-small {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 8px;
+            min-width: auto;
+            flex: 0;
+        }
+
+        .image-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            margin-top: 20px;
+        }
+
+        .image-list-header span {
+            color: #aaa;
+        }
+
+        .image-grid {
+            max-height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .image-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            transition: all 0.2s;
+        }
+
+        .image-item:hover {
+            background: rgba(0,0,0,0.3);
+        }
+
+        .image-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .image-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .image-item-name {
+            color: #ddd;
+            font-size: 13px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .image-item-size {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .image-item-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .image-item-actions button {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .btn-rotate {
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .btn-rotate:hover {
+            background: rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-delete {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .btn-delete:hover {
+            background: rgba(239, 68, 68, 0.4);
+        }
+
+        /* Auto-Optimize Section */
+        .auto-section {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(236, 72, 153, 0.1));
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .auto-section h3 {
+            color: #f59e0b;
+            font-size: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .auto-modes {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .auto-mode-btn {
+            padding: 12px 8px;
+            border-radius: 12px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .auto-mode-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .auto-mode-btn.active {
+            border-color: var(--mode-color);
+            background: var(--mode-bg);
+            color: var(--mode-color);
+        }
+
+        .auto-mode-btn .icon {
+            font-size: 20px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .auto-mode-btn .label {
+            display: block;
+            font-weight: 600;
+        }
+
+        .auto-mode-btn .desc {
+            display: block;
+            font-size: 10px;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* Social Media Presets */
+        .social-presets {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .social-btn {
+            padding: 10px 6px;
+            border-radius: 10px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            cursor: pointer;
+            font-size: 11px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .social-btn:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .social-btn.active {
+            border-color: var(--social-color);
+            background: var(--social-bg);
+            color: var(--social-color);
+        }
+
+        .social-btn .icon {
+            font-size: 18px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .target-size-section {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .target-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .target-input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.3);
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .target-input:focus {
+            outline: none;
+            border-color: #f59e0b;
+        }
+
+        .target-unit {
+            color: #888;
+            font-size: 14px;
+        }
+
+        /* Quality Presets */
+        .quality-presets {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .preset-btn {
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .preset-btn.active {
+            background: var(--preset-bg);
+            border-color: var(--preset-color);
+            color: var(--preset-color);
+        }
+
+        /* Sliders */
+        .slider-container {
+            margin-bottom: 24px;
+        }
+
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .slider-header label {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .slider-header span {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+        }
+
+        .slider-quality {
+            background: linear-gradient(to right, #ef4444 0%, #eab308 50%, #22c55e 100%);
+        }
+
+        .slider-dimension {
+            background: linear-gradient(to right, #667eea, #764ba2);
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* Advanced Toggle */
+        .advanced-toggle {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            color: #aaa;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0;
+            transition: all 0.3s;
+        }
+
+        .advanced-toggle.open {
+            margin-bottom: 16px;
+        }
+
+        .advanced-toggle .arrow {
+            transition: transform 0.3s;
+        }
+
+        .advanced-toggle.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .advanced-panel {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            display: none;
+        }
+
+        .advanced-panel.show {
+            display: block;
+        }
+
+        .format-buttons {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .format-btn {
+            padding: 10px 6px;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .format-btn.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.2);
+            color: #667eea;
+        }
+
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.03);
+            margin-bottom: 12px;
+        }
+
+        .checkbox-option:last-child {
+            margin-bottom: 0;
+        }
+
+        .checkbox-option input {
+            width: 20px;
+            height: 20px;
+            accent-color: #667eea;
+        }
+
+        .checkbox-option .label-text {
+            color: #ddd;
+            font-size: 14px;
+        }
+
+        .checkbox-option .label-desc {
+            color: #666;
+            font-size: 12px;
+        }
+
+        /* Privacy Button */
+        .privacy-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 12px;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(236, 72, 153, 0.2));
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 10px;
+            color: #f87171;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .privacy-btn:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.3), rgba(236, 72, 153, 0.3));
+        }
+
+        .privacy-btn.active {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.2));
+            border-color: rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+        }
+
+        /* Stats */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-box.before {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .stat-box.after {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .stat-value.red { color: #f87171; }
+        .stat-value.green { color: #4ade80; }
+
+        .savings-box {
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .savings-box.positive {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+
+        .savings-box.negative {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .savings-percent {
+            font-size: 36px;
+            font-weight: 800;
+        }
+
+        .savings-text {
+            color: #888;
+            font-size: 14px;
+        }
+
+        .savings-detail {
+            color: #666;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        /* Auto Result */
+        .auto-result {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .auto-result h4 {
+            color: #4ade80;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .auto-result .found-settings {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            font-size: 13px;
+            color: #aaa;
+            flex-wrap: wrap;
+        }
+
+        .auto-result .found-settings span {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* Live indicator */
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #4ade80;
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .calculating, .optimizing {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+
+        .calculating {
+            background: rgba(102, 126, 234, 0.2);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            color: #667eea;
+        }
+
+        .optimizing {
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+            color: #f59e0b;
+        }
+
+        .spinner {
+            width: 12px;
+            height: 12px;
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Comparison Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h3 {
+            color: #fff;
+            font-size: 20px;
+        }
+
+        .modal-close {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .comparison-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/10;
+            overflow: hidden;
+            border-radius: 12px;
+            background: #000;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            touch-action: none;
+            cursor: ew-resize;
+        }
+
+        .comparison-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            pointer-events: none;
+            user-select: none;
+            -webkit-user-drag: none;
+        }
+
+        .comparison-before {
+            clip-path: inset(0 50% 0 0);
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .comparison-slider {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            width: 4px;
+            background: #fff;
+            cursor: ew-resize;
+            transform: translateX(-50%);
+            z-index: 10;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .comparison-slider::before {
+            content: '◀ ▶';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            color: #000;
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .comparison-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+        }
+
+        .comparison-label {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .comparison-label.before {
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+        }
+
+        .comparison-label.after {
+            background: rgba(34, 197, 94, 0.2);
+            color: #4ade80;
+        }
+
+        /* Results */
+        .results-list {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        .result-item img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .result-item img:hover {
+            opacity: 0.8;
+        }
+
+        .result-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .result-name {
+            color: #ddd;
+            font-size: 14px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .result-sizes {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: #888;
+            flex-wrap: wrap;
+        }
+
+        .result-sizes .red { color: #f87171; }
+        .result-sizes .green { color: #4ade80; }
+        .result-sizes .percent { font-weight: 600; }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 32px;
+            color: #555;
+            font-size: 13px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* Optimization Progress */
+        .opt-progress {
+            margin-top: 12px;
+            padding: 12px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+        }
+
+        .opt-progress-text {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 8px;
+        }
+
+        .opt-progress-bar {
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .opt-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f59e0b, #ec4899);
+            border-radius: 3px;
+            transition: width 0.2s;
+        }
+
+        .opt-current-test {
+            font-size: 11px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        /* Settings saved indicator */
+        .settings-saved {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            color: #4ade80;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Auto-scan indicator */
+        .auto-scan-info {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+            color: #4ade80;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🖼️ Bild Kompressor Pro</h1>
+        <p>Automatisch die kleinste Dateigröße finden</p>
+    </div>
+
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="card">
+            <h2>📁 Bilder hochladen</h2>
+            
+            <div class="auto-scan-info">
+                🔍 Automatischer Scan: Findet sofort die beste Komprimierung für jedes Bild!
+            </div>
+            
+            <div class="dropzone" id="dropzone">
+                <div class="dropzone-icon">📤</div>
+                <p>Bilder hierher ziehen oder klicken</p>
+                <small>JPG, PNG, WebP, GIF unterstützt</small>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="fileInput.click()">
+                    📷 Einzelne Bilder
+                </button>
+                <button class="btn btn-secondary" onclick="folderInput.click()">
+                    📁 Ganzer Ordner
+                </button>
+            </div>
+
+            <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+            <input type="file" id="folderInput" accept="image/*" multiple webkitdirectory style="display:none">
+
+            <div id="imageListSection" class="hidden">
+                <div class="image-list-header">
+                    <span id="imageCount">0 Bilder ausgewählt</span>
+                    <button class="btn-clear" onclick="clearAll()">🗑️ Alle entfernen</button>
+                </div>
+                <div class="image-grid" id="imageGrid"></div>
+            </div>
+        </div>
+
+        <!-- Auto-Optimize Section -->
+        <div class="card">
+            <h2>
+                🪄 Auto-Optimierung
+                <span class="optimizing hidden" id="optimizingIndicator">
+                    <span class="spinner"></span>
+                    Scanne...
+                </span>
+            </h2>
+
+            <div class="auto-section">
+                <h3>⚡ Optimierungs-Ziel</h3>
+                
+                <div class="auto-modes">
+                    <button class="auto-mode-btn active" data-mode="smallest" style="--mode-color: #22c55e; --mode-bg: rgba(34, 197, 94, 0.15);">
+                        <span class="icon">📦</span>
+                        <span class="label">Kleinste Datei</span>
+                        <span class="desc">Max. Ersparnis</span>
+                    </button>
+                    <button class="auto-mode-btn" data-mode="balanced" style="--mode-color: #f59e0b; --mode-bg: rgba(245, 158, 11, 0.15);">
+                        <span class="icon">⚖️</span>
+                        <span class="label">Balanced</span>
+                        <span class="desc">Gute Balance</span>
+                    </button>
+                    <button class="auto-mode-btn" data-mode="quality" style="--mode-color: #667eea; --mode-bg: rgba(102, 126, 234, 0.15);">
+                        <span class="icon">✨</span>
+                        <span class="label">Qualität</span>
+                        <span class="desc">Beste Qualität</span>
+                    </button>
+                </div>
+
+                <button class="btn btn-magic btn-large" id="autoOptimizeBtn" onclick="runAutoOptimize()" disabled style="width: 100%;">
+                    🔍 Beste Einstellung finden
+                </button>
+
+                <div class="opt-progress hidden" id="optProgress">
+                    <div class="opt-progress-text">Scanne alle Formate und Qualitätsstufen...</div>
+                    <div class="opt-progress-bar">
+                        <div class="opt-progress-fill" id="optProgressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="opt-current-test" id="optCurrentTest">Teste: JPEG 85%</div>
+                </div>
+
+                <h3 style="margin-top: 16px;">📱 Social Media Presets</h3>
+                <div class="social-presets">
+                    <button class="social-btn active" data-preset="auto" style="--social-color: #22c55e; --social-bg: rgba(34, 197, 94, 0.15);">
+                        <span class="icon">🔄</span>
+                        Auto
+                    </button>
+                    <button class="social-btn" data-preset="instagram" style="--social-color: #E1306C; --social-bg: rgba(225, 48, 108, 0.15);">
+                        <span class="icon">📸</span>
+                        Instagram
+                    </button>
+                    <button class="social-btn" data-preset="whatsapp" style="--social-color: #25D366; --social-bg: rgba(37, 211, 102, 0.15);">
+                        <span class="icon">💬</span>
+                        WhatsApp
+                    </button>
+                    <button class="social-btn" data-preset="email" style="--social-color: #667eea; --social-bg: rgba(102, 126, 234, 0.15);">
+                        <span class="icon">📧</span>
+                        E-Mail
+                    </button>
+                    <button class="social-btn" data-preset="web" style="--social-color: #06b6d4; --social-bg: rgba(6, 182, 212, 0.15);">
+                        <span class="icon">🌐</span>
+                        Web
+                    </button>
+                </div>
+
+                <div class="target-size-section">
+                    <label style="color: #aaa; font-size: 13px; display: block; margin-bottom: 8px;">
+                        🎯 Ziel-Ersparnis festlegen
+                    </label>
+                    <div class="target-input-row">
+                        <input type="number" class="target-input" id="targetSavings" placeholder="z.B. 50" min="10" max="90" value="">
+                        <span class="target-unit">% sparen</span>
+                        <button class="btn btn-primary btn-small" onclick="optimizeToTarget()">
+                            🎯
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="auto-result hidden" id="autoResult">
+                <h4>✅ Beste Einstellungen gefunden!</h4>
+                <div class="found-settings">
+                    <div>Format: <span id="foundFormat">JPEG</span></div>
+                    <div>Qualität: <span id="foundQuality">85%</span></div>
+                    <div>Größe: <span id="foundDimension">100%</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual Settings Section -->
+        <div class="card">
+            <h2>
+                ⚙️ Einstellungen
+                <span class="live-indicator" id="liveIndicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </span>
+                <span class="calculating hidden" id="calculatingIndicator">
+                    <span class="spinner"></span>
+                    Berechne...
+                </span>
+                <span class="settings-saved hidden" id="settingsSaved">
+                    ✓ Gespeichert
+                </span>
+            </h2>
+
+            <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 10px;">
+                Qualitäts-Voreinstellungen
+            </label>
+            <div class="quality-presets" id="qualityPresets">
+                <button class="preset-btn" data-value="10" style="--preset-color: #ef4444; --preset-bg: #ef444422;">Worst</button>
+                <button class="preset-btn" data-value="30" style="--preset-color: #f97316; --preset-bg: #f9731622;">Poor</button>
+                <button class="preset-btn" data-value="50" style="--preset-color: #eab308; --preset-bg: #eab30822;">Acceptable</button>
+                <button class="preset-btn" data-value="70" style="--preset-color: #84cc16; --preset-bg: #84cc1622;">Good</button>
+                <button class="preset-btn active" data-value="85" style="--preset-color: #22c55e; --preset-bg: #22c55e22;">Great</button>
+                <button class="preset-btn" data-value="95" style="--preset-color: #10b981; --preset-bg: #10b98122;">Best</button>
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label>Bildqualität</label>
+                    <span id="qualityValue" style="color: #22c55e;">85% (Great)</span>
+                </div>
+                <input type="range" class="slider slider-quality" id="qualitySlider" min="1" max="100" value="85">
+            </div>
+
+            <div class="slider-container">
+                <div class="slider-header">
+                    <label>Größen-Multiplikator</label>
+                    <span id="dimensionValue" style="color: #667eea;">100%</span>
+                </div>
+                <input type="range" class="slider slider-dimension" id="dimensionSlider" min="10" max="100" value="100">
+                <div class="slider-labels">
+                    <span>10%</span>
+                    <span>100% (Original)</span>
+                </div>
+            </div>
+
+            <button class="advanced-toggle" id="advancedToggle">
+                <span>🔧 Erweiterte Einstellungen</span>
+                <span class="arrow">▼</span>
+            </button>
+
+            <div class="advanced-panel" id="advancedPanel">
+                <label style="color: #aaa; font-size: 14px; display: block; margin-bottom: 8px;">
+                    Ausgabeformat
+                </label>
+                <div class="format-buttons" id="formatButtons">
+                    <button class="format-btn active" data-value="auto">Auto</button>
+                    <button class="format-btn" data-value="original">Original</button>
+                    <button class="format-btn" data-value="jpeg">JPG</button>
+                    <button class="format-btn" data-value="png">PNG</button>
+                    <button class="format-btn" data-value="webp">WebP</button>
+                </div>
+
+                <label class="checkbox-option">
+                    <input type="checkbox" id="preserveMetadata" checked>
+                    <div>
+                        <div class="label-text">📋 Metadaten beibehalten</div>
+                        <div class="label-desc">EXIF-Daten, Kamerainfos, etc.</div>
+                    </div>
+                </label>
+
+                <label class="checkbox-option">
+                    <input type="checkbox" id="preserveLocation" checked>
+                    <div>
+                        <div class="label-text">📍 Standortdaten beibehalten</div>
+                        <div class="label-desc">GPS-Koordinaten vom Original</div>
+                    </div>
+                </label>
+
+                <button class="privacy-btn" id="privacyBtn" onclick="togglePrivacyMode()">
+                    🔒 Privatsphäre-Modus: Alle Metadaten & GPS entfernen
+                </button>
+            </div>
+
+            <div style="margin-top: 16px; display: flex; gap: 10px;">
+                <button class="btn btn-info" onclick="saveSettings()" style="flex: 1;">
+                    💾 Speichern
+                </button>
+                <button class="btn btn-secondary" onclick="loadSettings()" style="flex: 1;">
+                    📂 Laden
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="card">
+            <h2>📊 Speicherverbrauch</h2>
+
+            <div class="stats-grid">
+                <div class="stat-box before">
+                    <div class="stat-label">VORHER (Original)</div>
+                    <div class="stat-value red" id="originalSize">0 Bytes</div>
+                </div>
+                <div class="stat-box after">
+                    <div class="stat-label">NACHHER (Komprimiert)</div>
+                    <div class="stat-value green" id="compressedSize">0 Bytes</div>
+                </div>
+            </div>
+
+            <div class="savings-box positive hidden" id="savingsBox">
+                <div class="savings-percent" id="savingsPercent">↓ 0%</div>
+                <div class="savings-text" id="savingsText">Speicherplatz gespart</div>
+                <div class="savings-detail" id="savingsDetail">0 KB eingespart</div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-success btn-large hidden" id="downloadBtn" onclick="downloadAll()">
+                    💾 Alle Bilder herunterladen
+                </button>
+                <button class="btn btn-info hidden" id="reportBtn" onclick="downloadReport()">
+                    📋 Export-Bericht herunterladen
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="card hidden" id="resultsCard">
+            <h2 id="resultsTitle">📋 Ergebnisse</h2>
+            <p style="color: #888; font-size: 12px; margin-bottom: 12px;">💡 Klicke auf ein Bild für Vorher/Nachher-Vergleich</p>
+            <div class="results-list" id="resultsList"></div>
+        </div>
+    </div>
+
+    <div class="footer">
+        🔒 Alle Bilder werden lokal verarbeitet – nichts wird hochgeladen
+    </div>
+
+    <!-- Comparison Modal -->
+    <div class="modal-overlay hidden" id="comparisonModal" onclick="closeComparison(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>👁️ Vorher / Nachher Vergleich</h3>
+                <button class="modal-close" onclick="closeComparison()">&times;</button>
+            </div>
+            <div class="comparison-container" id="comparisonContainer">
+                <img class="comparison-image" id="comparisonAfter" src="" alt="Nachher">
+                <img class="comparison-image comparison-before" id="comparisonBefore" src="" alt="Vorher">
+                <div class="comparison-slider" id="comparisonSlider"></div>
+            </div>
+            <div class="comparison-labels">
+                <div class="comparison-label before" id="comparisonLabelBefore">Vorher: 0 KB</div>
+                <div class="comparison-label after" id="comparisonLabelAfter">Nachher: 0 KB</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // State
+        let images = [];
+        let compressedImages = [];
+        let settings = {
+            quality: 85,
+            dimension: 100,
+            format: 'auto', // Default to auto for best compression
+            preserveMetadata: true,
+            preserveLocation: true
+        };
+        let autoMode = 'smallest';
+        let totalOriginalSize = 0;
+        let totalCompressedSize = 0;
+        let isOptimizing = false;
+        let calculationTimeout = null;
+        let privacyMode = false;
+
+        // Load saved settings on start
+        document.addEventListener('DOMContentLoaded', () => {
+            const saved = localStorage.getItem('imageCompressorSettings');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    settings = { ...settings, ...parsed };
+                    applySettingsToUI();
+                } catch(e) {}
+            }
+        });
+
+        // Utility Functions
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getQualityLabel(q) {
+            if (q <= 10) return { text: 'Worst', color: '#ef4444' };
+            if (q <= 30) return { text: 'Poor', color: '#f97316' };
+            if (q <= 50) return { text: 'Acceptable', color: '#eab308' };
+            if (q <= 70) return { text: 'Good', color: '#84cc16' };
+            if (q <= 85) return { text: 'Great', color: '#22c55e' };
+            return { text: 'Best', color: '#10b981' };
+        }
+
+        function showCalculating(show) {
+            const liveIndicator = document.getElementById('liveIndicator');
+            const calculatingIndicator = document.getElementById('calculatingIndicator');
+            if (show) {
+                liveIndicator.classList.add('hidden');
+                calculatingIndicator.classList.remove('hidden');
+            } else {
+                liveIndicator.classList.remove('hidden');
+                calculatingIndicator.classList.add('hidden');
+            }
+        }
+
+        function applySettingsToUI() {
+            const qualitySlider = document.getElementById('qualitySlider');
+            const dimensionSlider = document.getElementById('dimensionSlider');
+            const dimensionValue = document.getElementById('dimensionValue');
+            
+            qualitySlider.value = settings.quality;
+            dimensionSlider.value = settings.dimension;
+            updateQualityDisplay();
+            dimensionValue.textContent = `${settings.dimension}%`;
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.value) === settings.quality) {
+                    btn.classList.add('active');
+                }
+            });
+
+            document.querySelectorAll('.format-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.value === settings.format) {
+                    btn.classList.add('active');
+                }
+            });
+
+            document.getElementById('preserveMetadata').checked = settings.preserveMetadata;
+            document.getElementById('preserveLocation').checked = settings.preserveLocation;
+        }
+
+        // Dropzone Events
+        const dropzone = document.getElementById('dropzone');
+        const fileInput = document.getElementById('fileInput');
+        const folderInput = document.getElementById('folderInput');
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.classList.add('dragover');
+        });
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.classList.remove('dragover');
+        });
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        function handleFiles(fileList) {
+            const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+            if (files.length === 0) return;
+
+            let loadedCount = 0;
+            const totalFiles = files.length;
+
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    images.push({
+                        file,
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        dataUrl: e.target.result,
+                        rotation: 0
+                    });
+                    totalOriginalSize += file.size;
+                    loadedCount++;
+                    
+                    updateImageDisplay();
+                    
+                    if (loadedCount === totalFiles) {
+                        document.getElementById('autoOptimizeBtn').disabled = false;
+                        // Auto-scan immediately when images are uploaded
+                        runAutoOptimize();
+                    }
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updateImageDisplay() {
+            const imageListSection = document.getElementById('imageListSection');
+            const imageCount = document.getElementById('imageCount');
+            const imageGrid = document.getElementById('imageGrid');
+            
+            if (images.length > 0) {
+                imageListSection.classList.remove('hidden');
+                imageCount.textContent = `${images.length} Bild${images.length !== 1 ? 'er' : ''} ausgewählt`;
+                
+                imageGrid.innerHTML = '';
+                images.forEach((img, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'image-item';
+                    div.innerHTML = `
+                        <img src="${img.dataUrl}" alt="${img.name}" style="transform: rotate(${img.rotation}deg)">
+                        <div class="image-item-info">
+                            <div class="image-item-name">${img.name}</div>
+                            <div class="image-item-size">${formatBytes(img.size)}</div>
+                        </div>
+                        <div class="image-item-actions">
+                            <button class="btn-rotate" onclick="rotateImage(${idx})" title="90° drehen">🔄</button>
+                            <button class="btn-delete" onclick="deleteImage(${idx})" title="Entfernen">🗑️</button>
+                        </div>
+                    `;
+                    imageGrid.appendChild(div);
+                });
+            } else {
+                imageListSection.classList.add('hidden');
+                document.getElementById('autoOptimizeBtn').disabled = true;
+            }
+
+            document.getElementById('originalSize').textContent = formatBytes(totalOriginalSize);
+        }
+
+        function deleteImage(index) {
+            totalOriginalSize -= images[index].size;
+            images.splice(index, 1);
+            
+            if (images.length === 0) {
+                clearAll();
+            } else {
+                updateImageDisplay();
+                runAutoOptimize();
+            }
+        }
+
+        function rotateImage(index) {
+            images[index].rotation = (images[index].rotation + 90) % 360;
+            updateImageDisplay();
+            runLiveCompression();
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('originalSize').textContent = formatBytes(totalOriginalSize);
+            document.getElementById('compressedSize').textContent = formatBytes(totalCompressedSize);
+
+            const savingsBox = document.getElementById('savingsBox');
+            const savingsPercent = document.getElementById('savingsPercent');
+            const savingsText = document.getElementById('savingsText');
+            const savingsDetail = document.getElementById('savingsDetail');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const reportBtn = document.getElementById('reportBtn');
+
+            if (totalCompressedSize > 0 && totalOriginalSize > 0) {
+                const savings = Math.round((1 - totalCompressedSize / totalOriginalSize) * 100);
+                savingsBox.classList.remove('hidden');
+                
+                if (savings >= 0) {
+                    savingsBox.classList.remove('negative');
+                    savingsBox.classList.add('positive');
+                    savingsPercent.textContent = `↓ ${savings}%`;
+                    savingsPercent.style.color = '#4ade80';
+                    savingsText.textContent = 'Speicherplatz gespart';
+                    savingsDetail.textContent = `${formatBytes(totalOriginalSize - totalCompressedSize)} eingespart`;
+                } else {
+                    savingsBox.classList.remove('positive');
+                    savingsBox.classList.add('negative');
+                    savingsPercent.textContent = `↑ ${Math.abs(savings)}%`;
+                    savingsPercent.style.color = '#f87171';
+                    savingsText.textContent = 'Größer geworden';
+                    savingsDetail.textContent = `${formatBytes(totalCompressedSize - totalOriginalSize)} mehr`;
+                }
+
+                downloadBtn.classList.remove('hidden');
+                reportBtn.classList.remove('hidden');
+                downloadBtn.textContent = compressedImages.length === 1 
+                    ? '💾 Bild herunterladen' 
+                    : `💾 Alle ${compressedImages.length} Bilder als ZIP`;
+            } else {
+                savingsBox.classList.add('hidden');
+                downloadBtn.classList.add('hidden');
+                reportBtn.classList.add('hidden');
+            }
+        }
+
+        function updateResultsList() {
+            const resultsCard = document.getElementById('resultsCard');
+            const resultsTitle = document.getElementById('resultsTitle');
+            const resultsList = document.getElementById('resultsList');
+            
+            if (compressedImages.length > 0) {
+                resultsCard.classList.remove('hidden');
+                resultsTitle.textContent = `📋 Ergebnisse (${compressedImages.length} Bilder)`;
+                resultsList.innerHTML = '';
+
+                compressedImages.forEach((img, idx) => {
+                    const savings = Math.round((1 - img.compressedSize / img.originalSize) * 100);
+                    const div = document.createElement('div');
+                    div.className = 'result-item';
+                    div.innerHTML = `
+                        <img src="${img.dataUrl}" alt="${img.name}" onclick="showComparison(${idx})" title="Klicken für Vergleich">
+                        <div class="result-info">
+                            <div class="result-name">${img.originalName}</div>
+                            <div class="result-sizes">
+                                <span class="red">${formatBytes(img.originalSize)}</span>
+                                <span>→</span>
+                                <span class="green">${formatBytes(img.compressedSize)}</span>
+                                <span class="percent" style="color: ${savings >= 0 ? '#4ade80' : '#f87171'}">${savings}%</span>
+                                <span style="color: #888;">(${img.usedFormat.toUpperCase()})</span>
+                            </div>
+                        </div>
+                    `;
+                    resultsList.appendChild(div);
+                });
+            } else {
+                resultsCard.classList.add('hidden');
+            }
+        }
+
+        function clearAll() {
+            images = [];
+            compressedImages = [];
+            totalOriginalSize = 0;
+            totalCompressedSize = 0;
+            document.getElementById('resultsCard').classList.add('hidden');
+            document.getElementById('downloadBtn').classList.add('hidden');
+            document.getElementById('reportBtn').classList.add('hidden');
+            document.getElementById('savingsBox').classList.add('hidden');
+            document.getElementById('autoResult').classList.add('hidden');
+            document.getElementById('resultsList').innerHTML = '';
+            updateImageDisplay();
+            updateStatsDisplay();
+        }
+
+        // Quick compress - test a specific format and quality
+        function quickCompress(imageData, quality, dimension, format) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    const scale = dimension / 100;
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    let mimeType;
+                    if (format === 'original') {
+                        mimeType = imageData.type;
+                    } else {
+                        switch(format) {
+                            case 'png': mimeType = 'image/png'; break;
+                            case 'webp': mimeType = 'image/webp'; break;
+                            default: mimeType = 'image/jpeg';
+                        }
+                    }
+
+                    canvas.toBlob((blob) => {
+                        resolve({
+                            size: blob ? blob.size : Infinity,
+                            format: format,
+                            quality: quality,
+                            dimension: dimension
+                        });
+                    }, mimeType, mimeType === 'image/png' ? undefined : quality / 100);
+                };
+                img.onerror = () => resolve({ size: Infinity, format, quality, dimension });
+                img.src = imageData.dataUrl;
+            });
+        }
+
+        // Full compress with best settings
+        function compressImageWithSettings(imageData, quality, dimension, format) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    const scale = dimension / 100;
+                    
+                    const rotation = imageData.rotation || 0;
+                    if (rotation === 90 || rotation === 270) {
+                        canvas.width = img.height * scale;
+                        canvas.height = img.width * scale;
+                    } else {
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                    }
+
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.rotate(rotation * Math.PI / 180);
+                    
+                    if (rotation === 90 || rotation === 270) {
+                        ctx.drawImage(img, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
+                    } else {
+                        ctx.drawImage(img, -canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+                    }
+                    ctx.restore();
+
+                    // Determine output format
+                    let mimeType;
+                    let extension;
+                    let usedFormat = format;
+                    
+                    if (format === 'original') {
+                        // Use original image format
+                        mimeType = imageData.type;
+                        usedFormat = imageData.type.includes('png') ? 'png' : 
+                                     imageData.type.includes('webp') ? 'webp' : 
+                                     imageData.type.includes('gif') ? 'gif' : 'jpeg';
+                        extension = imageData.type.includes('png') ? '.png' : 
+                                    imageData.type.includes('webp') ? '.webp' : 
+                                    imageData.type.includes('gif') ? '.gif' : '.jpg';
+                    } else {
+                        switch(format) {
+                            case 'png': 
+                                mimeType = 'image/png'; 
+                                extension = '.png';
+                                break;
+                            case 'webp': 
+                                mimeType = 'image/webp'; 
+                                extension = '.webp';
+                                break;
+                            default: 
+                                mimeType = 'image/jpeg'; 
+                                extension = '.jpg';
+                                usedFormat = 'jpeg';
+                        }
+                    }
+                    
+                    const baseName = imageData.name.replace(/\.[^/.]+$/, '');
+
+                    canvas.toBlob((blob) => {
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            resolve({
+                                blob,
+                                dataUrl: reader.result,
+                                originalDataUrl: imageData.dataUrl,
+                                name: baseName + '_compressed' + extension,
+                                originalName: imageData.name,
+                                originalSize: imageData.size,
+                                compressedSize: blob.size,
+                                type: mimeType,
+                                usedFormat: usedFormat,
+                                usedQuality: quality,
+                                usedDimension: dimension
+                            });
+                        };
+                        reader.readAsDataURL(blob);
+                    }, mimeType, mimeType === 'image/png' ? undefined : quality / 100);
+                };
+                img.src = imageData.dataUrl;
+            });
+        }
+
+        // AUTO-OPTIMIZATION - Find SMALLEST file size
+        async function runAutoOptimize() {
+            if (images.length === 0 || isOptimizing) return;
+
+            isOptimizing = true;
+            document.getElementById('optimizingIndicator').classList.remove('hidden');
+            document.getElementById('autoOptimizeBtn').disabled = true;
+            document.getElementById('autoResult').classList.add('hidden');
+            document.getElementById('optProgress').classList.remove('hidden');
+            
+            // Reset social media presets to Auto
+            document.querySelectorAll('.social-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.social-btn[data-preset="auto"]').classList.add('active');
+            
+            // Reset format buttons to Auto
+            document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('.format-btn[data-value="auto"]').classList.add('active');
+            settings.format = 'auto';
+
+            compressedImages = [];
+            totalCompressedSize = 0;
+
+            // Process each image individually to find its best settings
+            for (let imgIdx = 0; imgIdx < images.length; imgIdx++) {
+                const imageData = images[imgIdx];
+                const originalSize = imageData.size;
+                
+                let bestResult = null;
+                let smallestSize = originalSize; // Start with original size as baseline
+                
+                // Define test configurations based on mode
+                let testConfigs = [];
+                
+                // Test different formats (including original)
+                const formats = ['jpeg', 'webp', 'png', 'original'];
+                
+                // Test qualities based on mode
+                let qualities;
+                let dimensions;
+                
+                switch(autoMode) {
+                    case 'smallest':
+                        qualities = [20, 30, 40, 50, 60, 70, 80];
+                        dimensions = [100, 90, 80, 70];
+                        break;
+                    case 'balanced':
+                        qualities = [50, 60, 70, 80, 85];
+                        dimensions = [100, 90, 80];
+                        break;
+                    case 'quality':
+                        qualities = [75, 80, 85, 90, 95];
+                        dimensions = [100, 95, 90];
+                        break;
+                    default:
+                        qualities = [30, 50, 70, 80];
+                        dimensions = [100, 90, 80];
+                }
+
+                // Build test configurations
+                for (const format of formats) {
+                    for (const quality of qualities) {
+                        for (const dimension of dimensions) {
+                            // Skip PNG with quality (PNG doesn't use quality)
+                            if (format === 'png' && quality !== qualities[0]) continue;
+                            testConfigs.push({ format, quality, dimension });
+                        }
+                    }
+                }
+
+                const totalTests = testConfigs.length;
+
+                // Test each configuration
+                for (let i = 0; i < testConfigs.length; i++) {
+                    const config = testConfigs[i];
+                    
+                    // Update progress
+                    const overallProgress = ((imgIdx / images.length) + (i / testConfigs.length / images.length)) * 100;
+                    document.getElementById('optProgressFill').style.width = `${overallProgress}%`;
+                    document.getElementById('optCurrentTest').textContent = 
+                        `Bild ${imgIdx + 1}/${images.length}: ${config.format.toUpperCase()} Q:${config.quality}% D:${config.dimension}%`;
+
+                    const result = await quickCompress(imageData, config.quality, config.dimension, config.format);
+                    
+                    // Only accept if smaller than original AND smaller than best so far
+                    if (result.size < smallestSize && result.size < originalSize) {
+                        smallestSize = result.size;
+                        bestResult = config;
+                    }
+
+                    // Small delay for UI
+                    if (i % 5 === 0) {
+                        await new Promise(r => setTimeout(r, 10));
+                    }
+                }
+
+                // If no smaller result found, use a safe default that should be smaller
+                if (!bestResult) {
+                    // Force JPEG with lower quality to ensure smaller size
+                    bestResult = { format: 'jpeg', quality: 60, dimension: 90 };
+                    
+                    // Verify this actually makes it smaller
+                    const verifyResult = await quickCompress(imageData, bestResult.quality, bestResult.dimension, bestResult.format);
+                    if (verifyResult.size >= originalSize) {
+                        // If still not smaller, go more aggressive
+                        bestResult = { format: 'jpeg', quality: 40, dimension: 80 };
+                    }
+                }
+
+                // Compress with best settings
+                const compressed = await compressImageWithSettings(
+                    imageData, 
+                    bestResult.quality, 
+                    bestResult.dimension, 
+                    bestResult.format
+                );
+                
+                // Final check - if still larger, try even more aggressive
+                if (compressed.compressedSize >= originalSize) {
+                    const aggressiveResult = await compressImageWithSettings(
+                        imageData, 30, 70, 'jpeg'
+                    );
+                    if (aggressiveResult.compressedSize < originalSize) {
+                        compressedImages.push(aggressiveResult);
+                        totalCompressedSize += aggressiveResult.compressedSize;
+                    } else {
+                        // As last resort, just use the best we found
+                        compressedImages.push(compressed);
+                        totalCompressedSize += compressed.compressedSize;
+                    }
+                } else {
+                    compressedImages.push(compressed);
+                    totalCompressedSize += compressed.compressedSize;
+                }
+                
+                updateStatsDisplay();
+                updateResultsList();
+            }
+
+            // Update UI with found settings (from first image as reference)
+            if (compressedImages.length > 0) {
+                const firstResult = compressedImages[0];
+                document.getElementById('foundFormat').textContent = firstResult.usedFormat.toUpperCase();
+                document.getElementById('foundQuality').textContent = `${firstResult.usedQuality}%`;
+                document.getElementById('foundDimension').textContent = `${firstResult.usedDimension}%`;
+                document.getElementById('autoResult').classList.remove('hidden');
+                
+                // Update main settings
+                settings.format = firstResult.usedFormat;
+                settings.quality = firstResult.usedQuality;
+                settings.dimension = firstResult.usedDimension;
+                applySettingsToUI();
+            }
+
+            isOptimizing = false;
+            document.getElementById('optimizingIndicator').classList.add('hidden');
+            document.getElementById('autoOptimizeBtn').disabled = false;
+            document.getElementById('optProgress').classList.add('hidden');
+        }
+
+        // Live compression with current settings
+        async function runLiveCompression() {
+            if (images.length === 0 || isOptimizing) return;
+
+            // If format is auto, run auto optimization instead
+            if (settings.format === 'auto') {
+                await runAutoOptimize();
+                return;
+            }
+
+            if (calculationTimeout) {
+                clearTimeout(calculationTimeout);
+            }
+
+            showCalculating(true);
+            compressedImages = [];
+            totalCompressedSize = 0;
+
+            calculationTimeout = setTimeout(async () => {
+                for (let i = 0; i < images.length; i++) {
+                    const compressed = await compressImageWithSettings(
+                        images[i], 
+                        settings.quality, 
+                        settings.dimension, 
+                        settings.format
+                    );
+                    compressedImages.push(compressed);
+                    totalCompressedSize += compressed.compressedSize;
+                    
+                    updateStatsDisplay();
+                    updateResultsList();
+                }
+
+                showCalculating(false);
+            }, 100);
+        }
+
+        // Optimize to target savings percentage
+        async function optimizeToTarget() {
+            const targetInput = document.getElementById('targetSavings');
+            const targetPercent = parseInt(targetInput.value);
+            
+            if (!targetPercent || targetPercent < 10 || targetPercent > 90 || images.length === 0) {
+                alert('Bitte gib eine Ziel-Ersparnis zwischen 10% und 90% ein.');
+                return;
+            }
+
+            // Temporarily change mode and run optimization
+            const originalMode = autoMode;
+            
+            // Adjust mode based on target
+            if (targetPercent >= 70) {
+                autoMode = 'smallest';
+            } else if (targetPercent >= 40) {
+                autoMode = 'balanced';
+            } else {
+                autoMode = 'quality';
+            }
+            
+            await runAutoOptimize();
+            autoMode = originalMode;
+        }
+
+        // Social Media Presets
+        document.querySelectorAll('.social-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                document.querySelectorAll('.social-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const preset = btn.dataset.preset;
+                
+                // Auto mode - run auto optimization
+                if (preset === 'auto') {
+                    if (images.length > 0) {
+                        await runAutoOptimize();
+                    }
+                    return;
+                }
+                
+                switch(preset) {
+                    case 'instagram':
+                        settings.quality = 85;
+                        settings.dimension = 100;
+                        settings.format = 'jpeg';
+                        break;
+                    case 'whatsapp':
+                        settings.quality = 70;
+                        settings.dimension = 80;
+                        settings.format = 'jpeg';
+                        break;
+                    case 'email':
+                        settings.quality = 60;
+                        settings.dimension = 70;
+                        settings.format = 'jpeg';
+                        break;
+                    case 'web':
+                        settings.quality = 80;
+                        settings.dimension = 100;
+                        settings.format = 'webp';
+                        break;
+                }
+                
+                applySettingsToUI();
+                if (images.length > 0) {
+                    await runLiveCompression();
+                }
+            });
+        });
+
+        // Auto Mode Selection
+        document.querySelectorAll('.auto-mode-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.auto-mode-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                autoMode = btn.dataset.mode;
+            });
+        });
+
+        // Quality Presets
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.quality = parseInt(btn.dataset.value);
+                document.getElementById('qualitySlider').value = settings.quality;
+                updateQualityDisplay();
+                runLiveCompression();
+            });
+        });
+
+        // Quality Slider
+        document.getElementById('qualitySlider').addEventListener('input', (e) => {
+            settings.quality = parseInt(e.target.value);
+            updateQualityDisplay();
+            
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.value) === settings.quality) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            runLiveCompression();
+        });
+
+        function updateQualityDisplay() {
+            const label = getQualityLabel(settings.quality);
+            document.getElementById('qualityValue').textContent = `${settings.quality}% (${label.text})`;
+            document.getElementById('qualityValue').style.color = label.color;
+        }
+
+        // Dimension Slider
+        document.getElementById('dimensionSlider').addEventListener('input', (e) => {
+            settings.dimension = parseInt(e.target.value);
+            document.getElementById('dimensionValue').textContent = `${settings.dimension}%`;
+            runLiveCompression();
+        });
+
+        // Advanced Toggle
+        document.getElementById('advancedToggle').addEventListener('click', () => {
+            document.getElementById('advancedToggle').classList.toggle('open');
+            document.getElementById('advancedPanel').classList.toggle('show');
+        });
+
+        // Format Buttons
+        document.querySelectorAll('.format-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                settings.format = btn.dataset.value;
+                
+                // If auto is selected, run auto optimization
+                if (settings.format === 'auto' && images.length > 0) {
+                    await runAutoOptimize();
+                } else if (images.length > 0) {
+                    await runLiveCompression();
+                }
+            });
+        });
+
+        // Checkboxes
+        document.getElementById('preserveMetadata').addEventListener('change', (e) => {
+            settings.preserveMetadata = e.target.checked;
+            if (!e.target.checked) {
+                privacyMode = true;
+                updatePrivacyButton();
+            }
+        });
+        document.getElementById('preserveLocation').addEventListener('change', (e) => {
+            settings.preserveLocation = e.target.checked;
+            if (!e.target.checked) {
+                privacyMode = true;
+                updatePrivacyButton();
+            }
+        });
+
+        function togglePrivacyMode() {
+            privacyMode = !privacyMode;
+            settings.preserveMetadata = !privacyMode;
+            settings.preserveLocation = !privacyMode;
+            document.getElementById('preserveMetadata').checked = !privacyMode;
+            document.getElementById('preserveLocation').checked = !privacyMode;
+            updatePrivacyButton();
+        }
+
+        function updatePrivacyButton() {
+            const privacyBtn = document.getElementById('privacyBtn');
+            if (privacyMode) {
+                privacyBtn.classList.add('active');
+                privacyBtn.innerHTML = '🔓 Privatsphäre-Modus: AKTIV';
+            } else {
+                privacyBtn.classList.remove('active');
+                privacyBtn.innerHTML = '🔒 Privatsphäre-Modus: Alle Metadaten & GPS entfernen';
+            }
+        }
+
+        function saveSettings() {
+            localStorage.setItem('imageCompressorSettings', JSON.stringify(settings));
+            document.getElementById('settingsSaved').classList.remove('hidden');
+            setTimeout(() => document.getElementById('settingsSaved').classList.add('hidden'), 2000);
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem('imageCompressorSettings');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    settings = { ...settings, ...parsed };
+                    applySettingsToUI();
+                    runLiveCompression();
+                    document.getElementById('settingsSaved').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('settingsSaved').classList.add('hidden'), 2000);
+                } catch(e) {
+                    alert('Keine gespeicherten Einstellungen gefunden.');
+                }
+            } else {
+                alert('Keine gespeicherten Einstellungen gefunden.');
+            }
+        }
+
+        // Comparison Modal
+        function showComparison(index) {
+            const img = compressedImages[index];
+            document.getElementById('comparisonBefore').src = img.originalDataUrl;
+            document.getElementById('comparisonAfter').src = img.dataUrl;
+            document.getElementById('comparisonLabelBefore').textContent = `Vorher: ${formatBytes(img.originalSize)}`;
+            document.getElementById('comparisonLabelAfter').textContent = `Nachher: ${formatBytes(img.compressedSize)}`;
+            document.getElementById('comparisonModal').classList.remove('hidden');
+            
+            initComparisonSlider();
+        }
+
+        function closeComparison(event) {
+            if (!event || event.target === document.getElementById('comparisonModal')) {
+                document.getElementById('comparisonModal').classList.add('hidden');
+            }
+        }
+
+        function initComparisonSlider() {
+            const container = document.getElementById('comparisonContainer');
+            const slider = document.getElementById('comparisonSlider');
+            const before = document.getElementById('comparisonBefore');
+            
+            let isDragging = false;
+
+            function updateSlider(x) {
+                const rect = container.getBoundingClientRect();
+                let percent = ((x - rect.left) / rect.width) * 100;
+                percent = Math.max(0, Math.min(100, percent));
+                
+                slider.style.left = `${percent}%`;
+                before.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+            }
+
+            // Prevent default drag behavior
+            container.ondragstart = (e) => e.preventDefault();
+            slider.ondragstart = (e) => e.preventDefault();
+
+            slider.onmousedown = (e) => {
+                e.preventDefault();
+                isDragging = true;
+            };
+            
+            document.onmouseup = () => isDragging = false;
+            
+            document.onmousemove = (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                    updateSlider(e.clientX);
+                }
+            };
+
+            container.onmousedown = (e) => {
+                e.preventDefault();
+                isDragging = true;
+                updateSlider(e.clientX);
+            };
+
+            // Touch support
+            slider.ontouchstart = (e) => {
+                e.preventDefault();
+                isDragging = true;
+            };
+            
+            document.ontouchend = () => isDragging = false;
+            
+            document.ontouchmove = (e) => {
+                if (isDragging) {
+                    e.preventDefault();
+                    updateSlider(e.touches[0].clientX);
+                }
+            };
+            
+            container.ontouchstart = (e) => {
+                e.preventDefault();
+                isDragging = true;
+                updateSlider(e.touches[0].clientX);
+            };
+        }
+
+        async function downloadAll() {
+            if (compressedImages.length === 0) return;
+
+            if (compressedImages.length === 1) {
+                const link = document.createElement('a');
+                link.href = compressedImages[0].dataUrl;
+                link.download = compressedImages[0].name;
+                link.click();
+                return;
+            }
+
+            const zip = new JSZip();
+            compressedImages.forEach(img => {
+                const base64 = img.dataUrl.split(',')[1];
+                zip.file(img.name, base64, { base64: true });
+            });
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = 'komprimierte_bilder.zip';
+            link.click();
+        }
+
+        function downloadReport() {
+            if (compressedImages.length === 0) return;
+
+            let report = '╔══════════════════════════════════════════════════════════════╗\n';
+            report += '║           BILD KOMPRESSOR PRO - EXPORT-BERICHT              ║\n';
+            report += '╚══════════════════════════════════════════════════════════════╝\n\n';
+            report += `Datum: ${new Date().toLocaleString('de-DE')}\n`;
+            report += `Anzahl Bilder: ${compressedImages.length}\n\n`;
+            report += '═══════════════════════════════════════════════════════════════\n';
+            report += 'ZUSAMMENFASSUNG\n';
+            report += '═══════════════════════════════════════════════════════════════\n';
+            report += `Gesamt vorher:  ${formatBytes(totalOriginalSize)}\n`;
+            report += `Gesamt nachher: ${formatBytes(totalCompressedSize)}\n`;
+            const totalSavings = Math.round((1 - totalCompressedSize / totalOriginalSize) * 100);
+            report += `Ersparnis:      ${totalSavings}% (${formatBytes(totalOriginalSize - totalCompressedSize)})\n\n`;
+            
+            report += '═══════════════════════════════════════════════════════════════\n';
+            report += 'EINZELNE BILDER\n';
+            report += '═══════════════════════════════════════════════════════════════\n\n';
+            
+            compressedImages.forEach((img, idx) => {
+                const savings = Math.round((1 - img.compressedSize / img.originalSize) * 100);
+                report += `${idx + 1}. ${img.originalName}\n`;
+                report += `   Format:    ${img.usedFormat.toUpperCase()}\n`;
+                report += `   Qualität:  ${img.usedQuality}%\n`;
+                report += `   Dimension: ${img.usedDimension}%\n`;
+                report += `   Vorher:    ${formatBytes(img.originalSize)}\n`;
+                report += `   Nachher:   ${formatBytes(img.compressedSize)}\n`;
+                report += `   Ersparnis: ${savings}%\n\n`;
+            });
+
+            report += '═══════════════════════════════════════════════════════════════\n';
+            report += 'Erstellt mit Bild Kompressor Pro\n';
+
+            const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'komprimierung_bericht.txt';
+            link.click();
+        }
+    </script>
+</body>
+</html>
