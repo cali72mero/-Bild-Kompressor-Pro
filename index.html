@@ -969,6 +969,70 @@
             font-size: 13px;
         }
 
+        .footer-extended {
+            max-width: 800px;
+            margin: 40px auto 20px;
+            padding: 30px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.08);
+            text-align: center;
+        }
+
+        .footer-extended h3 {
+            color: #fff;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+
+        .app-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #00d4aa, #00a885);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .app-link-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(0, 212, 170, 0.3);
+        }
+
+        .app-link-btn .icon {
+            font-size: 20px;
+        }
+
+        .app-description {
+            color: #888;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .footer-credits {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: #666;
+            font-size: 12px;
+        }
+
+        .footer-credits a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .footer-credits a:hover {
+            text-decoration: underline;
+        }
+
         .hidden {
             display: none !important;
         }
@@ -1316,6 +1380,22 @@
 
     <div class="footer">
         🔒 Alle Bilder werden lokal verarbeitet – nichts wird hochgeladen
+    </div>
+
+    <!-- Weitere Apps Section -->
+    <div class="footer-extended">
+        <h3>🚀 Weitere Apps von mir</h3>
+        
+        <a href="https://cali72mero.github.io/neon-shield/" class="app-link-btn" target="_blank">
+            <span class="icon">🔐</span>
+            Neon Shield
+        </a>
+        <p class="app-description">Daten verschlüsseln – kostenlos & lokal im Browser</p>
+        
+        <div class="footer-credits">
+            Erstellt von <a href="https://github.com/cali72mero" target="_blank">cali72mero</a><br>
+            © 2025 Alle Rechte vorbehalten
+        </div>
     </div>
 
     <!-- Comparison Modal -->
