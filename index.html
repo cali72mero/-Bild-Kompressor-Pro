@@ -1644,7 +1644,12 @@
                 }
 
                 downloadBtn.classList.remove('hidden');
-                reportBtn.classList.remove('hidden');
+                // Hide report button in privacy mode (contains metadata)
+                if (privacyMode) {
+                    reportBtn.classList.add('hidden');
+                } else {
+                    reportBtn.classList.remove('hidden');
+                }
                 downloadBtn.textContent = compressedImages.length === 1 
                     ? '💾 Bild herunterladen' 
                     : `💾 Alle ${compressedImages.length} Bilder als ZIP`;
@@ -1804,7 +1809,16 @@
                         }
                     }
                     
-                    const baseName = imageData.name.replace(/\.[^/.]+$/, '');
+                    // Anonymize filename if privacy mode is active
+                    let outputName;
+                    if (privacyMode) {
+                        // Generate random anonymous name
+                        const randomId = Math.random().toString(36).substring(2, 10);
+                        outputName = 'bild_' + randomId + extension;
+                    } else {
+                        const baseName = imageData.name.replace(/\.[^/.]+$/, '');
+                        outputName = baseName + '_compressed' + extension;
+                    }
 
                     canvas.toBlob((blob) => {
                         const reader = new FileReader();
@@ -1813,8 +1827,8 @@
                                 blob,
                                 dataUrl: reader.result,
                                 originalDataUrl: imageData.dataUrl,
-                                name: baseName + '_compressed' + extension,
-                                originalName: imageData.name,
+                                name: outputName,
+                                originalName: privacyMode ? 'bild' + extension : imageData.name,
                                 originalSize: imageData.size,
                                 compressedSize: blob.size,
                                 type: mimeType,
@@ -2329,7 +2343,7 @@
             const content = await zip.generateAsync({ type: 'blob' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(content);
-            link.download = 'komprimierte_bilder.zip';
+            link.download = privacyMode ? 'bilder.zip' : 'komprimierte_bilder.zip';
             link.click();
         }
 
