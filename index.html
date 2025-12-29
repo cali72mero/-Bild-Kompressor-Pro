@@ -1148,15 +1148,15 @@
         <!-- Upload Section -->
         <div class="card">
             <h2>📁 Bilder hochladen</h2>
-            
+
             <div class="perf-badge">
                 ⚡ Optimiert für 100+ Bilder - Bis zu 10x schneller durch Parallel-Verarbeitung!
             </div>
-            
+
             <div class="auto-scan-info">
-                🔍 Automatischer Scan: Findet sofort die beste Komprimierung!
+                🔍 Automatischer Scan: Findet sofort die beste Komprimierung (nachdem alle Bilder geladen sind)!
             </div>
-            
+
             <div class="dropzone" id="dropzone">
                 <div class="dropzone-icon">📤</div>
                 <p>Bilder hierher ziehen oder klicken</p>
@@ -1196,7 +1196,7 @@
 
             <div class="auto-section">
                 <h3>⚡ Optimierungs-Ziel</h3>
-                
+
                 <div class="auto-modes">
                     <button class="auto-mode-btn active" data-mode="smallest" style="--mode-color: #22c55e; --mode-bg: rgba(34, 197, 94, 0.15);">
                         <span class="icon">📦</span>
@@ -1418,13 +1418,13 @@
     <!-- Weitere Apps Section -->
     <div class="footer-extended">
         <h3>🚀 Weitere Apps von mir</h3>
-        
+
         <a href="https://cali72mero.github.io/neon-shield/" class="app-link-btn" target="_blank">
             <span class="icon">🔐</span>
             Neon Shield
         </a>
         <p class="app-description">Daten verschlüsseln – kostenlos & lokal im Browser</p>
-        
+
         <div class="footer-credits">
             Erstellt von <a href="https://github.com/cali72mero" target="_blank">cali72mero</a><br>
             © 2025 Alle Rechte vorbehalten
@@ -1454,7 +1454,7 @@
         // ========================================
         // TURBO EDITION - OPTIMIZED FOR PERFORMANCE
         // ========================================
-        
+
         // State
         let images = [];
         let compressedImages = [];
@@ -1475,6 +1475,10 @@
         // PERFORMANCE CONSTANTS
         const BATCH_SIZE = 8; // Process 8 images in parallel
         const MAX_TESTS_PER_IMAGE = 12; // Reduced from ~80 to 12 tests
+
+        // NEU: Lade-Status
+        let isLoadingImages = false;   // true, solange FileReader noch Bilder lädt
+        let imagesToLoad = 0;          // wie viele Bilder noch im Ladevorgang sind
 
         // Load saved settings on start
         document.addEventListener('DOMContentLoaded', () => {
@@ -1522,7 +1526,7 @@
             const qualitySlider = document.getElementById('qualitySlider');
             const dimensionSlider = document.getElementById('dimensionSlider');
             const dimensionValue = document.getElementById('dimensionValue');
-            
+
             qualitySlider.value = settings.quality;
             dimensionSlider.value = settings.dimension;
             updateQualityDisplay();
@@ -1568,12 +1572,23 @@
         fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         folderInput.addEventListener('change', (e) => handleFiles(e.target.files));
 
+        // NEUE Version von handleFiles: erst ALLE laden, dann 1x UI + Auto-Scan
         function handleFiles(fileList) {
             const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
             if (files.length === 0) return;
 
-            let loadedCount = 0;
-            const totalFiles = files.length;
+            const autoBtn = document.getElementById('autoOptimizeBtn');
+
+            // Ladephase starten
+            isLoadingImages = true;
+            imagesToLoad += files.length;
+
+            // Während des Ladens: Auto-Button sperren und Text anzeigen
+            autoBtn.disabled = true;
+            autoBtn.textContent = '⏳ Lade Bilder...';
+
+            // Optional: Dropzone optisch markieren
+            dropzone.classList.add('dragover');
 
             files.forEach(file => {
                 const reader = new FileReader();
@@ -1587,13 +1602,23 @@
                         rotation: 0
                     });
                     totalOriginalSize += file.size;
-                    loadedCount++;
-                    
-                    updateImageDisplay();
-                    
-                    if (loadedCount === totalFiles) {
-                        document.getElementById('autoOptimizeBtn').disabled = false;
-                        // Auto-scan immediately when images are uploaded
+
+                    imagesToLoad--;
+
+                    // Solange noch Dateien laden, KEINE UI-Updates/Komprimierung
+                    if (imagesToLoad === 0) {
+                        // Alle Bilder sind fertig geladen
+                        isLoadingImages = false;
+                        dropzone.classList.remove('dragover');
+
+                        // Liste & Größen jetzt EINMAL aktualisieren
+                        updateImageDisplay();
+
+                        // Auto-Button wieder freigeben
+                        autoBtn.disabled = false;
+                        autoBtn.textContent = '🔍 Beste Einstellung finden';
+
+                        // Jetzt erst Auto-Optimierung starten
                         runAutoOptimize();
                     }
                 };
@@ -1605,11 +1630,11 @@
             const imageListSection = document.getElementById('imageListSection');
             const imageCount = document.getElementById('imageCount');
             const imageGrid = document.getElementById('imageGrid');
-            
+
             if (images.length > 0) {
                 imageListSection.classList.remove('hidden');
                 imageCount.textContent = `${images.length} Bild${images.length !== 1 ? 'er' : ''} ausgewählt`;
-                
+
                 imageGrid.innerHTML = '';
                 images.forEach((img, idx) => {
                     const div = document.createElement('div');
@@ -1638,7 +1663,7 @@
         function deleteImage(index) {
             totalOriginalSize -= images[index].size;
             images.splice(index, 1);
-            
+
             if (images.length === 0) {
                 clearAll();
             } else {
@@ -1667,7 +1692,7 @@
             if (totalCompressedSize > 0 && totalOriginalSize > 0) {
                 const savings = Math.round((1 - totalCompressedSize / totalOriginalSize) * 100);
                 savingsBox.classList.remove('hidden');
-                
+
                 if (savings >= 0) {
                     savingsBox.classList.remove('negative');
                     savingsBox.classList.add('positive');
@@ -1690,8 +1715,8 @@
                 } else {
                     reportBtn.classList.remove('hidden');
                 }
-                downloadBtn.textContent = compressedImages.length === 1 
-                    ? '💾 Bild herunterladen' 
+                downloadBtn.textContent = compressedImages.length === 1
+                    ? '💾 Bild herunterladen'
                     : `💾 Alle ${compressedImages.length} Bilder als ZIP`;
             } else {
                 savingsBox.classList.add('hidden');
@@ -1704,7 +1729,7 @@
             const resultsCard = document.getElementById('resultsCard');
             const resultsTitle = document.getElementById('resultsTitle');
             const resultsList = document.getElementById('resultsList');
-            
+
             if (compressedImages.length > 0) {
                 resultsCard.classList.remove('hidden');
                 resultsTitle.textContent = `📋 Ergebnisse (${compressedImages.length} Bilder)`;
@@ -1739,19 +1764,25 @@
             compressedImages = [];
             totalOriginalSize = 0;
             totalCompressedSize = 0;
+
+            // Lade-Status zurücksetzen
+            isLoadingImages = false;
+            imagesToLoad = 0;
+
+            const autoBtn = document.getElementById('autoOptimizeBtn');
+            autoBtn.disabled = true;
+            autoBtn.textContent = '🔍 Beste Einstellung finden';
+
             document.getElementById('resultsCard').classList.add('hidden');
             document.getElementById('downloadBtn').classList.add('hidden');
             document.getElementById('reportBtn').classList.add('hidden');
             document.getElementById('savingsBox').classList.add('hidden');
             document.getElementById('autoResult').classList.add('hidden');
             document.getElementById('resultsList').innerHTML = '';
+
             updateImageDisplay();
             updateStatsDisplay();
         }
-
-        // ========================================
-        // OPTIMIZED COMPRESSION FUNCTIONS
-        // ========================================
 
         // Quick compress - test a specific format and quality
         function quickCompress(imageData, quality, dimension, format) {
@@ -1801,7 +1832,7 @@
                     const ctx = canvas.getContext('2d');
 
                     const scale = dimension / 100;
-                    
+
                     const rotation = imageData.rotation || 0;
                     if (rotation === 90 || rotation === 270) {
                         canvas.width = img.height * scale;
@@ -1814,7 +1845,7 @@
                     ctx.save();
                     ctx.translate(canvas.width / 2, canvas.height / 2);
                     ctx.rotate(rotation * Math.PI / 180);
-                    
+
                     if (rotation === 90 || rotation === 270) {
                         ctx.drawImage(img, -canvas.height / 2, -canvas.width / 2, canvas.height, canvas.width);
                     } else {
@@ -1826,32 +1857,32 @@
                     let mimeType;
                     let extension;
                     let usedFormat = format;
-                    
+
                     if (format === 'original') {
                         mimeType = imageData.type;
-                        usedFormat = imageData.type.includes('png') ? 'png' : 
-                                     imageData.type.includes('webp') ? 'webp' : 
+                        usedFormat = imageData.type.includes('png') ? 'png' :
+                                     imageData.type.includes('webp') ? 'webp' :
                                      imageData.type.includes('gif') ? 'gif' : 'jpeg';
-                        extension = imageData.type.includes('png') ? '.png' : 
-                                    imageData.type.includes('webp') ? '.webp' : 
+                        extension = imageData.type.includes('png') ? '.png' :
+                                    imageData.type.includes('webp') ? '.webp' :
                                     imageData.type.includes('gif') ? '.gif' : '.jpg';
                     } else {
                         switch(format) {
-                            case 'png': 
-                                mimeType = 'image/png'; 
+                            case 'png':
+                                mimeType = 'image/png';
                                 extension = '.png';
                                 break;
-                            case 'webp': 
-                                mimeType = 'image/webp'; 
+                            case 'webp':
+                                mimeType = 'image/webp';
                                 extension = '.webp';
                                 break;
-                            default: 
-                                mimeType = 'image/jpeg'; 
+                            default:
+                                mimeType = 'image/jpeg';
                                 extension = '.jpg';
                                 usedFormat = 'jpeg';
                         }
                     }
-                    
+
                     let outputName;
                     if (privacyMode) {
                         const randomId = Math.random().toString(36).substring(2, 10);
@@ -1889,18 +1920,19 @@
         // TURBO AUTO-OPTIMIZATION - PARALLEL BATCH PROCESSING
         // ========================================
         async function runAutoOptimize() {
-            if (images.length === 0 || isOptimizing) return;
+            // nicht komprimieren, solange Bilder noch geladen werden
+            if (images.length === 0 || isOptimizing || isLoadingImages) return;
 
             isOptimizing = true;
             document.getElementById('optimizingIndicator').classList.remove('hidden');
             document.getElementById('autoOptimizeBtn').disabled = true;
             document.getElementById('autoResult').classList.add('hidden');
             document.getElementById('optProgress').classList.remove('hidden');
-            
+
             // Reset social media presets to Auto
             document.querySelectorAll('.social-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.social-btn[data-preset="auto"]').classList.add('active');
-            
+
             // Reset format buttons to Auto
             document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
             document.querySelector('.format-btn[data-value="auto"]').classList.add('active');
@@ -1909,14 +1941,14 @@
             compressedImages = [];
             totalCompressedSize = 0;
 
-            // OPTIMIZED: Define smart test configurations (reduced from ~80 to ~12 per image)
-            const formats = ['jpeg', 'webp'];  // Removed 'png' and 'original' for speed
+            // OPTIMIZED: Define smart test configurations
+            const formats = ['jpeg', 'webp'];
             let qualities, dimensions;
-            
+
             switch(autoMode) {
                 case 'smallest':
-                    qualities = [30, 50, 70];  // 3 qualities instead of 7
-                    dimensions = [100, 80];     // 2 dimensions instead of 4
+                    qualities = [30, 50, 70];
+                    dimensions = [100, 80];
                     break;
                 case 'balanced':
                     qualities = [60, 80];
@@ -1931,7 +1963,7 @@
                     dimensions = [100, 90];
             }
 
-            // Build test configurations (now ~12 instead of ~80)
+            // Build test configurations
             const testConfigs = [];
             for (const format of formats) {
                 for (const quality of qualities) {
@@ -1941,35 +1973,30 @@
                 }
             }
 
-            // TURBO BOOST: Process images in parallel batches
             const totalBatches = Math.ceil(images.length / BATCH_SIZE);
-            
+
             for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
                 const batchStart = batchIdx * BATCH_SIZE;
                 const batchEnd = Math.min(batchStart + BATCH_SIZE, images.length);
                 const batch = images.slice(batchStart, batchEnd);
 
-                // Update progress
                 const batchProgress = (batchIdx / totalBatches) * 100;
                 document.getElementById('optProgressFill').style.width = `${batchProgress}%`;
-                document.getElementById('optCurrentTest').textContent = 
+                document.getElementById('optCurrentTest').textContent =
                     `Verarbeite Batch ${batchIdx + 1}/${totalBatches} (${batch.length} Bilder parallel)`;
 
-                // Process entire batch in parallel
                 const batchResults = await Promise.all(
                     batch.map(async (imageData) => {
                         const originalSize = imageData.size;
                         let bestResult = null;
                         let smallestSize = originalSize;
 
-                        // Test all configurations for this image
                         const testResults = await Promise.all(
-                            testConfigs.map(config => 
+                            testConfigs.map(config =>
                                 quickCompress(imageData, config.quality, config.dimension, config.format)
                             )
                         );
 
-                        // Find best result
                         for (const result of testResults) {
                             if (result.size < smallestSize && result.size < originalSize) {
                                 smallestSize = result.size;
@@ -1977,16 +2004,14 @@
                             }
                         }
 
-                        // Fallback if no smaller result found
                         if (!bestResult) {
                             bestResult = { format: 'jpeg', quality: 60, dimension: 90 };
                         }
 
-                        // Compress with best settings
                         const compressed = await compressImageWithSettings(
-                            imageData, 
-                            bestResult.quality, 
-                            bestResult.dimension, 
+                            imageData,
+                            bestResult.quality,
+                            bestResult.dimension,
                             bestResult.format
                         );
 
@@ -1994,42 +2019,35 @@
                     })
                 );
 
-                // Add batch results
                 for (const compressed of batchResults) {
                     compressedImages.push(compressed);
                     totalCompressedSize += compressed.compressedSize;
                 }
 
-                // Update UI after each batch
                 updateStatsDisplay();
                 updateResultsList();
 
-                // Small delay for UI responsiveness
                 await new Promise(r => setTimeout(r, 10));
             }
 
-            // Update UI with found settings (from first image as reference)
             if (compressedImages.length > 0) {
                 const firstResult = compressedImages[0];
                 document.getElementById('foundFormat').textContent = firstResult.usedFormat.toUpperCase();
                 document.getElementById('foundQuality').textContent = `${firstResult.usedQuality}%`;
                 document.getElementById('foundDimension').textContent = `${firstResult.usedDimension}%`;
                 document.getElementById('autoResult').classList.remove('hidden');
-                
-                // Update main settings
+
                 settings.format = firstResult.usedFormat;
                 settings.quality = firstResult.usedQuality;
                 settings.dimension = firstResult.usedDimension;
                 applySettingsToUI();
             }
 
-            // Complete
             document.getElementById('optProgressFill').style.width = '100%';
             isOptimizing = false;
             document.getElementById('optimizingIndicator').classList.add('hidden');
             document.getElementById('autoOptimizeBtn').disabled = false;
-            
-            // Hide progress after short delay
+
             setTimeout(() => {
                 document.getElementById('optProgress').classList.add('hidden');
             }, 500);
@@ -2039,7 +2057,8 @@
         // TURBO LIVE COMPRESSION
         // ========================================
         async function runLiveCompression() {
-            if (images.length === 0 || isOptimizing) return;
+            // während des Ladens NICHT rechnen
+            if (images.length === 0 || isOptimizing || isLoadingImages) return;
 
             // If format is auto, run auto optimization instead
             if (settings.format === 'auto') {
@@ -2056,27 +2075,24 @@
             totalCompressedSize = 0;
 
             calculationTimeout = setTimeout(async () => {
-                // TURBO: Process in parallel batches
                 const totalBatches = Math.ceil(images.length / BATCH_SIZE);
-                
+
                 for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
                     const batchStart = batchIdx * BATCH_SIZE;
                     const batchEnd = Math.min(batchStart + BATCH_SIZE, images.length);
                     const batch = images.slice(batchStart, batchEnd);
 
-                    // Process batch in parallel
                     const batchResults = await Promise.all(
-                        batch.map(img => 
+                        batch.map(img =>
                             compressImageWithSettings(img, settings.quality, settings.dimension, settings.format)
                         )
                     );
 
-                    // Add results
                     for (const compressed of batchResults) {
                         compressedImages.push(compressed);
                         totalCompressedSize += compressed.compressedSize;
                     }
-                    
+
                     updateStatsDisplay();
                     updateResultsList();
                 }
@@ -2089,14 +2105,14 @@
         async function optimizeToTarget() {
             const targetInput = document.getElementById('targetSavings');
             const targetPercent = parseInt(targetInput.value);
-            
+
             if (!targetPercent || targetPercent < 10 || targetPercent > 90 || images.length === 0) {
                 alert('Bitte gib eine Ziel-Ersparnis zwischen 10% und 90% ein.');
                 return;
             }
 
             const originalMode = autoMode;
-            
+
             if (targetPercent >= 70) {
                 autoMode = 'smallest';
             } else if (targetPercent >= 40) {
@@ -2104,7 +2120,7 @@
             } else {
                 autoMode = 'quality';
             }
-            
+
             await runAutoOptimize();
             autoMode = originalMode;
         }
@@ -2114,16 +2130,16 @@
             btn.addEventListener('click', async () => {
                 document.querySelectorAll('.social-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                
+
                 const preset = btn.dataset.preset;
-                
+
                 if (preset === 'auto') {
                     if (images.length > 0) {
                         await runAutoOptimize();
                     }
                     return;
                 }
-                
+
                 switch(preset) {
                     case 'instagram':
                         settings.quality = 85;
@@ -2146,7 +2162,7 @@
                         settings.format = 'webp';
                         break;
                 }
-                
+
                 applySettingsToUI();
                 if (images.length > 0) {
                     await runLiveCompression();
@@ -2179,14 +2195,14 @@
         document.getElementById('qualitySlider').addEventListener('input', (e) => {
             settings.quality = parseInt(e.target.value);
             updateQualityDisplay();
-            
+
             document.querySelectorAll('.preset-btn').forEach(btn => {
                 btn.classList.remove('active');
                 if (parseInt(btn.dataset.value) === settings.quality) {
                     btn.classList.add('active');
                 }
             });
-            
+
             runLiveCompression();
         });
 
@@ -2215,7 +2231,7 @@
                 document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 settings.format = btn.dataset.value;
-                
+
                 if (settings.format === 'auto' && images.length > 0) {
                     await runAutoOptimize();
                 } else if (images.length > 0) {
@@ -2292,7 +2308,7 @@
             document.getElementById('comparisonLabelBefore').textContent = `Vorher: ${formatBytes(img.originalSize)}`;
             document.getElementById('comparisonLabelAfter').textContent = `Nachher: ${formatBytes(img.compressedSize)}`;
             document.getElementById('comparisonModal').classList.remove('hidden');
-            
+
             initComparisonSlider();
         }
 
@@ -2306,14 +2322,14 @@
             const container = document.getElementById('comparisonContainer');
             const slider = document.getElementById('comparisonSlider');
             const before = document.getElementById('comparisonBefore');
-            
+
             let isDragging = false;
 
             function updateSlider(x) {
                 const rect = container.getBoundingClientRect();
                 let percent = ((x - rect.left) / rect.width) * 100;
                 percent = Math.max(0, Math.min(100, percent));
-                
+
                 slider.style.left = `${percent}%`;
                 before.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
             }
@@ -2325,9 +2341,9 @@
                 e.preventDefault();
                 isDragging = true;
             };
-            
+
             document.onmouseup = () => isDragging = false;
-            
+
             document.onmousemove = (e) => {
                 if (isDragging) {
                     e.preventDefault();
@@ -2345,16 +2361,16 @@
                 e.preventDefault();
                 isDragging = true;
             };
-            
+
             document.ontouchend = () => isDragging = false;
-            
+
             document.ontouchmove = (e) => {
                 if (isDragging) {
                     e.preventDefault();
                     updateSlider(e.touches[0].clientX);
                 }
             };
-            
+
             container.ontouchstart = (e) => {
                 e.preventDefault();
                 isDragging = true;
@@ -2401,11 +2417,11 @@
             report += `Gesamt nachher: ${formatBytes(totalCompressedSize)}\n`;
             const totalSavings = Math.round((1 - totalCompressedSize / totalOriginalSize) * 100);
             report += `Ersparnis:      ${totalSavings}% (${formatBytes(totalOriginalSize - totalCompressedSize)})\n\n`;
-            
+
             report += '═══════════════════════════════════════════════════════════════\n';
             report += 'EINZELNE BILDER\n';
             report += '═══════════════════════════════════════════════════════════════\n\n';
-            
+
             compressedImages.forEach((img, idx) => {
                 const savings = Math.round((1 - img.compressedSize / img.originalSize) * 100);
                 report += `${idx + 1}. ${img.originalName}\n`;
